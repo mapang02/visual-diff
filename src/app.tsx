@@ -26,7 +26,7 @@ export function App() {
   }
 
   return (
-    <>
+    <div class="w-full">
       <DiffDisplay
         origText={diffDisplayState.origText}
         changedText={diffDisplayState.changedText}
@@ -36,6 +36,6 @@ export function App() {
         <TextArea onInput={updateChangedText} class="w-full resize-none"></TextArea>
       </div>
       <button onClick={computeDiff}>Compute Diff</button>
-    </>
+    </div>
   )
 }
