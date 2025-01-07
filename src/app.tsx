@@ -1,16 +1,20 @@
-import { useState } from 'preact/hooks'
-import { JSX } from "preact";
+import { Dispatch, useContext, useState } from 'preact/hooks'
+import { JSX, createContext } from "preact";
 import TextArea from './components/TextArea'
 import DiffDisplay from './components/DiffDisplay'
 import preactLogo from './assets/preact.svg'
 import viteLogo from '/vite.svg'
 import './app.css'
+import OptionsMenu from './components/OptionsMenu';
+import { DiffOptions, OptionsContext } from "./context/OptionsContext";
 
 export function App() {
-  const [origText, setOrigText] = useState("");
-  const [changedText, setChangedText] = useState("");
-  const [diffDisplayState, setDiffDisplayState] = useState({origText: "", changedText: ""})
+  const [oldText, setOldText] = useState("");
+  const [newText, setNewText] = useState("");
+  const [options, setOptions] = useState<DiffOptions>({ diffMode: "word", collapseLines: false });
+  const [diffDisplayState, setDiffDisplayState] = useState({ oldText: "", newText: "" });
 
+  /*
   const updateOrigText = (e: JSX.TargetedInputEvent<HTMLTextAreaElement>) => {
     setOrigText(e.currentTarget.value);
   }
@@ -24,18 +28,37 @@ export function App() {
     console.log(changedText);
     setDiffDisplayState({origText: origText, changedText: changedText});
   }
+  */
+
+  const submitInputText = (e: JSX.TargetedSubmitEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    const formData = new FormData(e.currentTarget);
+    setDiffDisplayState({oldText: formData.get("old-text") as string, newText: formData.get("new-text") as string});
+  }
 
   return (
-    <div class="w-full">
-      <DiffDisplay
-        origText={diffDisplayState.origText}
-        changedText={diffDisplayState.changedText}
-      />
-      <div class="grid grid-cols-2">
-        <TextArea onInput={updateOrigText} class="w-full resize-none"></TextArea>
-        <TextArea onInput={updateChangedText} class="w-full resize-none"></TextArea>
+    <OptionsContext.Provider value={{ options: options, setOptions: setOptions }}>
+      <div class="w-full">
+        <OptionsMenu/>
+        <DiffDisplay
+          oldText={diffDisplayState.oldText}
+          newText={diffDisplayState.newText}
+        />
+        <form onSubmit={submitInputText}>
+          <div class="grid grid-cols-2">
+            <textarea
+              name="old-text"
+              class="w-full resize-none"
+            />
+            <textarea
+              name="new-text"
+              class="w-full resize-none"
+            />
+          </div>
+          <button type="submit">Compute Diff</button>
+        </form>
       </div>
-      <button onClick={computeDiff}>Compute Diff</button>
-    </div>
+    </OptionsContext.Provider>
   )
 }

@@ -1,9 +1,11 @@
 import { JSX } from "preact";
 import { diffWords, diffLines, diffWordsWithSpace, diffArrays, Change, createPatch, structuredPatch, diffChars } from "diff";
+import { useContext } from "preact/hooks";
+import { DiffMode, DiffOptions, OptionsContext } from "../context/OptionsContext";
 
 interface DiffDisplayProps {
-    origText: string;
-    changedText: string;
+    oldText: string;
+    newText: string;
 }
 
 interface TextSpan {
@@ -15,13 +17,13 @@ interface TextSpan {
 const REMOVED_TEXT_STYLE = "bg-red-400/50";
 const ADDED_TEXT_STYLE = "bg-green-400/50";
 const REGULAR_TEXT_STYLE = "";
-const REMOVED_LINE_STYLE = "table-cell text-left bg-red-200/50";
-const ADDED_LINE_STYLE = "table-cell text-left bg-green-200/50";
-const REGULAR_LINE_STYLE = "table-cell text-left";
+const REMOVED_LINE_STYLE = "table-cell text-left whitespace-pre-wrap bg-red-200/50";
+const ADDED_LINE_STYLE = "table-cell text-left whitespace-pre-wrap bg-green-200/50";
+const REGULAR_LINE_STYLE = "table-cell text-left whitespace-pre-wrap";
 const FILLER_LINE_STYLE = "table-cell text-left bg-gray-50/10";
 const LINE_NUM_STYLE = "table-cell text-right pr-2";
 
-function formatDiffLines(oldText: string, newText: string) {
+function formatDiffLines(oldText: string, newText: string, diffMode: DiffMode) {
     const lineDiff = diffLines(oldText, newText, { newlineIsToken: false, ignoreNewlineAtEof: false });
     console.log(lineDiff);
     
@@ -114,7 +116,13 @@ function formatDiffLines(oldText: string, newText: string) {
                 );
             }
             else {
-                let diff = diffWordsWithSpace(oLines[i].value, nLines[i].value);
+                let diff: Change[] = [];
+                if (diffMode === "char") {
+                    diff = diffChars(oLines[i].value, nLines[i].value);
+                }
+                else {
+                    diff = diffWordsWithSpace(oLines[i].value, nLines[i].value);
+                }
                 let oLineSpans: JSX.Element[] = [];
                 let nLineSpans: JSX.Element[] = [];
                 diff.forEach((ch) => {
@@ -169,7 +177,8 @@ function formatDiffLines(oldText: string, newText: string) {
 }
 
 export default function DiffDisplay(props: DiffDisplayProps) {
-    const visualDiffLines = formatDiffLines(props.origText, props.changedText);
+    const { options } = useContext(OptionsContext)!;
+    const visualDiffLines = formatDiffLines(props.oldText, props.newText, options.diffMode);
     return (
         <table class="table-fixed w-full">
             <thead>
