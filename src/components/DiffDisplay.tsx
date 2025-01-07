@@ -1,17 +1,11 @@
 import { JSX } from "preact";
-import { diffWords, diffLines, diffWordsWithSpace, diffArrays, Change, createPatch, structuredPatch, diffChars } from "diff";
+import { Change, diffLines, diffWordsWithSpace, diffChars } from "diff";
 import { useContext } from "preact/hooks";
-import { DiffMode, DiffOptions, OptionsContext } from "../context/OptionsContext";
+import { OptionsContext } from "../context/OptionsContext";
 
 interface DiffDisplayProps {
     oldText: string;
     newText: string;
-}
-
-interface TextSpan {
-    text: string,
-    added?: boolean,
-    removed?: boolean
 }
 
 const REMOVED_TEXT_STYLE = "bg-red-400/50";
@@ -21,17 +15,21 @@ const REMOVED_LINE_STYLE = "table-cell text-left whitespace-pre-wrap bg-red-200/
 const ADDED_LINE_STYLE = "table-cell text-left whitespace-pre-wrap bg-green-200/50";
 const REGULAR_LINE_STYLE = "table-cell text-left whitespace-pre-wrap";
 const FILLER_LINE_STYLE = "table-cell text-left bg-gray-50/10";
+const COLLAPSED_LINE_STYLE = "table-cell text-left bg-gray-100/50";
 const LINE_NUM_STYLE = "table-cell text-right pr-2";
 
-function formatDiffLines(oldText: string, newText: string, diffMode: DiffMode) {
-    const lineDiff = diffLines(oldText, newText, { newlineIsToken: false, ignoreNewlineAtEof: false });
+export default function DiffDisplay(props: DiffDisplayProps) {
+    const { options } = useContext(OptionsContext)!;
+    
+    // Get line-level diff, separate into old lines and new lines with padding lines so that unedited lines stay at the same level
+    const lineDiff = diffLines(props.oldText, props.newText, { newlineIsToken: false, ignoreNewlineAtEof: false });
     console.log(lineDiff);
     
-    // Separate into old lines and new lines, add padding lines so that unedited lines stay at the same level
     let oLines: Change[] = [];
     let nLines: Change[] = [];
     const paddingLine: Change = { count: 0, value: "", added: false, removed: false};
     lineDiff.forEach((ch, lineno) => {
+        // Normally ending \n indicates end of current hunk (and not a line to be shown), but \n at end of text should still be shown
         const lines = ch.value.split("\n").slice(0, (lineno === lineDiff.length - 1) ? undefined : -1);
         if (ch.removed) {
             lines.forEach((ln) => {
@@ -57,112 +55,148 @@ function formatDiffLines(oldText: string, newText: string, diffMode: DiffMode) {
         }
     });
     // Add final padding lines if needed
-    console.log(`oLines.length: ${oLines.length}, nLines.length: ${nLines.length}`);
     while (nLines.length > oLines.length) {
         oLines.push(paddingLine);
     }
     while (oLines.length > nLines.length) {
         nLines.push(paddingLine);
     }
-
     console.log("oLines:");
     console.log(oLines);
     console.log("nLines:");
     console.log(nLines);
 
-    // Compare each line, and convert to HTML line by line
-    let visualDiffLines: JSX.Element[] = []
-    let oLineCount = 0;
-    let nLineCount = 0;
+    // Compare each line, and generate word/char-level diffs between compared lines
+    // Removed or added lines paired with a padding line are considered completely changed, receiving deeper-colored highlighting
+    let oLineHunks: Change[][] = [];
+    let nLineHunks: Change[][] = [];
+    
     for (let i = 0; i < oLines.length; i++) {
-        let oLineText = <div class={FILLER_LINE_STYLE}></div>
-        let nLineText = <div class={FILLER_LINE_STYLE}></div>
-
-        if (oLines[i].count === 0) {
-            nLineText = (
-                <div class={ADDED_LINE_STYLE}>
-                    <span class={ADDED_TEXT_STYLE}>
-                        {nLines[i].value}
-                    </span>
-                </div>
-            );
-            nLineCount += 1;
+        if (oLines[i].count === 0) {        // Old text has padding line
+            oLineHunks.push([]);
+            nLineHunks.push([nLines[i]]);
         }
-        else if (nLines[i].count === 0) {
-            oLineText = (
-                <div class={REMOVED_LINE_STYLE}>
-                    <span class={REMOVED_TEXT_STYLE}>
-                        {oLines[i].value}
-                    </span>
-                </div>
-            );
-            oLineCount += 1;
+        else if (nLines[i].count === 0) {   // New text has padding line
+            nLineHunks.push([]);
+            oLineHunks.push([oLines[i]]);
         }
-        else { // Determine diff between matched lines
-            if (!oLines[i].removed && !nLines[i].added) {
-                oLineText = (
-                    <div class={REGULAR_LINE_STYLE}>
-                        <span>
-                            {oLines[i].value}
-                        </span>
-                    </div>
-                );
-                nLineText = (
-                    <div class={REGULAR_LINE_STYLE}>
-                        <span>
-                            {nLines[i].value}
-                        </span>
-                    </div>
-                );
+        else {
+            if (!oLines[i].removed && !nLines[i].added) {   // Line is unedited between texts
+                oLineHunks.push([oLines[i]]);
+                nLineHunks.push([nLines[i]]);
             }
-            else {
-                let diff: Change[] = [];
-                if (diffMode === "char") {
+            else {  // Removed line paired with added line, find diff
+                let diff: Change[];
+                if (options.diffMode === "char") {
                     diff = diffChars(oLines[i].value, nLines[i].value);
                 }
                 else {
                     diff = diffWordsWithSpace(oLines[i].value, nLines[i].value);
                 }
-                let oLineSpans: JSX.Element[] = [];
-                let nLineSpans: JSX.Element[] = [];
+
+                let oCurrLine: Change[] = [];
+                let nCurrLine: Change[] = [];
                 diff.forEach((ch) => {
-                    if (ch.removed) {
-                        const removedSpan = <span class={REMOVED_TEXT_STYLE}>{ch.value}</span>;
-                        oLineSpans.push(removedSpan);
+                    if (ch.removed) {   // Text chunk only present in old text
+                        oCurrLine.push(ch);
                     }
-                    else if (ch.added) {
-                        const addedSpan = <span class={ADDED_TEXT_STYLE}>{ch.value}</span>;
-                        nLineSpans.push(addedSpan);
+                    else if (ch.added) {    // Text chunk only present in new text
+                        nCurrLine.push(ch);
                     }
-                    else {
-                        const sharedSpan = <span class={REGULAR_TEXT_STYLE}>{ch.value}</span>;
-                        oLineSpans.push(sharedSpan);
-                        nLineSpans.push(sharedSpan);
+                    else {  // Unedited text chunk
+                        oCurrLine.push(ch);
+                        nCurrLine.push(ch);
                     }
                 });
-
-                oLineText = (
-                    <div class={REMOVED_LINE_STYLE}>
-                        <span>
-                            {oLineSpans}
-                        </span>
-                    </div>
-                );
-                nLineText = (
-                    <div class={ADDED_LINE_STYLE}>
-                        <span>
-                            {nLineSpans}
-                        </span>
-                    </div>
-                );
+                oLineHunks.push(oCurrLine);
+                nLineHunks.push(nCurrLine);
             }
-            oLineCount += 1;
-            nLineCount += 1;
+        }
+    }
+    console.log(oLineHunks);
+    console.log(nLineHunks);
+
+    // Format hunks from line-by-line diffs into table rows
+    let dispTableLines: JSX.Element[] = [];
+    let oLineNum = 0;
+    let nLineNum = 0;
+    let oCollapseStart: number | null = null;
+    let nCollapseStart: number | null = null;
+    for (let i = 0; i < oLineHunks.length; i++) {
+        // Determine highlight color of line based on whether it contains edits
+        let oLineStyle = FILLER_LINE_STYLE;
+        if (oLineHunks[i].length > 0) {
+            oLineStyle = REMOVED_LINE_STYLE;
+            oLineNum += 1;
         }
 
-        const oLineNumDisp = <div class={LINE_NUM_STYLE}>{oLines[i].count ? oLineCount : ""}</div>
-        const nLineNumDisp = <div class={LINE_NUM_STYLE}>{nLines[i].count ? nLineCount : ""}</div>
-        const visualDiffRow = (
+        let nLineStyle = FILLER_LINE_STYLE;
+        if (nLineHunks[i].length > 0) {
+            nLineStyle = ADDED_LINE_STYLE;
+            nLineNum += 1;
+        }
+        // Remove highlight if both lines are unedited
+        if (oLineHunks[i].length === 1 && !oLineHunks[i][0].removed && nLineHunks[i].length === 1 && !nLineHunks[i][0].added) {
+            oLineStyle = REGULAR_LINE_STYLE;
+            nLineStyle = REGULAR_LINE_STYLE;
+        }
+
+        // Handle text collapsing (if in effect)
+        if (options.collapseLines) {
+            if (oLineStyle === REGULAR_LINE_STYLE) {
+                // Mark start point of collapsed section
+                if (oCollapseStart === null) {
+                    oCollapseStart = oLineNum;
+                    nCollapseStart = nLineNum;
+                }
+                // Mark end point of collapsed section if next line is not unedited, create entry indicating this info
+                if (i + 1 === oLineHunks.length || !(oLineHunks[i + 1].length === 1 && !oLineHunks[i + 1][0].removed && nLineHunks[i + 1].length === 1 && !nLineHunks[i + 1][0].added)) {
+                    const oCollapseText = `Lines ${oCollapseStart} to ${oLineNum} collapsed`;
+                    const nCollapseText = `Lines ${nCollapseStart} to ${nLineNum} collapsed`;
+                    const collapsedLinesEntry = (
+                        <div class="table-row">
+                            <div class={COLLAPSED_LINE_STYLE}></div>
+                            <div class={COLLAPSED_LINE_STYLE}>{oCollapseText}</div>
+                            <div class={COLLAPSED_LINE_STYLE}></div>
+                            <div class={COLLAPSED_LINE_STYLE}>{nCollapseText}</div>
+                        </div>
+                    );
+                    dispTableLines.push(collapsedLinesEntry);
+    
+                    oCollapseStart = null;
+                    nCollapseStart = null;
+                }
+                continue;
+            }
+        }
+
+        // Convert paired line diffs into text spans
+        const oLineSpans = oLineHunks[i].map((ch) => {
+            if (ch.removed) {
+                return (
+                    <span class={REMOVED_TEXT_STYLE}>{ch.value}</span>
+                );
+            }
+            return (
+                <span class={REGULAR_TEXT_STYLE}>{ch.value}</span>
+            );
+        });
+        const nLineSpans = nLineHunks[i].map((ch) => {
+            if (ch.added) {
+                return (
+                    <span class={ADDED_TEXT_STYLE}>{ch.value}</span>
+                );
+            }
+            return (
+                <span class={REGULAR_TEXT_STYLE}>{ch.value}</span>
+            );
+        });
+
+        const oLineText = <div class={oLineStyle}>{oLineSpans}</div>
+        const nLineText = <div class={nLineStyle}>{nLineSpans}</div>
+        const oLineNumDisp = <div class={LINE_NUM_STYLE}>{oLineSpans.length > 0 ? oLineNum : ""}</div>
+        const nLineNumDisp = <div class={LINE_NUM_STYLE}>{nLineSpans.length > 0 ? nLineNum : ""}</div>
+        const dispTableEntry = (
             <div class="table-row">
                 {oLineNumDisp}
                 {oLineText}
@@ -170,15 +204,9 @@ function formatDiffLines(oldText: string, newText: string, diffMode: DiffMode) {
                 {nLineText}
             </div>
         );
-        visualDiffLines.push(visualDiffRow);
+        dispTableLines.push(dispTableEntry);
     }
 
-    return visualDiffLines;
-}
-
-export default function DiffDisplay(props: DiffDisplayProps) {
-    const { options } = useContext(OptionsContext)!;
-    const visualDiffLines = formatDiffLines(props.oldText, props.newText, options.diffMode);
     return (
         <table class="table-fixed w-full">
             <thead>
@@ -189,7 +217,7 @@ export default function DiffDisplay(props: DiffDisplayProps) {
                     <th/>
                 </tr>
             </thead>
-            {visualDiffLines}
+            {dispTableLines}
         </table>
     );
 }
