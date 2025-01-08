@@ -28,9 +28,11 @@ export default function DiffDisplay(props: DiffDisplayProps) {
     let oLines: Change[] = [];
     let nLines: Change[] = [];
     const paddingLine: Change = { count: 0, value: "", added: false, removed: false};
-    lineDiff.forEach((ch, lineno) => {
-        // Normally ending \n indicates end of current hunk (and not a line to be shown), but \n at end of text should still be shown
-        const lines = ch.value.split("\n").slice(0, (lineno === lineDiff.length - 1) ? undefined : -1);
+    lineDiff.forEach((ch, idx) => {
+        let lines = ch.value.split("\n");
+        if (lines.length > ch.count!) { // Remove erroneous empty section at end of hunk if it is not a new section
+            lines.pop();
+        }
         if (ch.removed) {
             lines.forEach((ln) => {
                 oLines.push({ count: 1, value: ln, added: ch.added, removed: ch.removed });
@@ -54,6 +56,25 @@ export default function DiffDisplay(props: DiffDisplayProps) {
             });
         }
     });
+
+    // If either text ends in newline, it must be manually inserted
+    for (let i = lineDiff.length - 1; i >= 0; i--) {
+        if (!lineDiff[i].added) {
+            if (lineDiff[i].value.endsWith("\n")) {
+                oLines.push({ count: 1, value: "", added: lineDiff[i].added, removed: lineDiff[i].removed });
+            }
+            break;
+        }
+    }
+    for (let i = lineDiff.length - 1; i >= 0; i--) {
+        if (!lineDiff[i].removed) {
+            if (lineDiff[i].value.endsWith("\n")) {
+                nLines.push({ count: 1, value: "", added: lineDiff[i].added, removed: lineDiff[i].removed });
+            }
+            break;
+        }
+    }
+    
     // Add final padding lines if needed
     while (nLines.length > oLines.length) {
         oLines.push(paddingLine);
@@ -108,6 +129,15 @@ export default function DiffDisplay(props: DiffDisplayProps) {
                         nCurrLine.push(ch);
                     }
                 });
+
+                // If one line is blank, push an empty change so it is not registered as a padding line
+                if (oCurrLine.length === 0) {
+                    oCurrLine.push({ count: 0, value: "", added: false, removed: false})
+                }
+                if (nCurrLine.length === 0) {
+                    nCurrLine.push({ count: 0, value: "", added: false, removed: false})
+                }
+
                 oLineHunks.push(oCurrLine);
                 nLineHunks.push(nCurrLine);
             }

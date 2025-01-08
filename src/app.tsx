@@ -1,16 +1,16 @@
-import { Dispatch, useContext, useState } from 'preact/hooks'
-import { JSX, createContext } from "preact";
-import TextArea from './components/TextArea'
+import { useState } from 'preact/hooks'
+import { JSX } from "preact";
+//import TextArea from './components/TextArea'
 import DiffDisplay from './components/DiffDisplay'
-import preactLogo from './assets/preact.svg'
-import viteLogo from '/vite.svg'
+//import preactLogo from './assets/preact.svg'
+//import viteLogo from '/vite.svg'
 import './app.css'
 import OptionsMenu from './components/OptionsMenu';
 import { DiffOptions, OptionsContext } from "./context/OptionsContext";
 
 export function App() {
-  const [oldText, setOldText] = useState("");
-  const [newText, setNewText] = useState("");
+  //const [oldText, setOldText] = useState("");
+  //const [newText, setNewText] = useState("");
   const [options, setOptions] = useState<DiffOptions>({ diffMode: "word", collapseLines: false });
   const [diffDisplayState, setDiffDisplayState] = useState({ oldText: "", newText: "" });
 
