@@ -1,6 +1,6 @@
 import { JSX } from "preact";
 import { Change, diffLines, diffWordsWithSpace, diffChars } from "diff";
-import { useContext } from "preact/hooks";
+import { useContext, useState } from "preact/hooks";
 import { OptionsContext } from "../context/OptionsContext";
 
 interface DiffDisplayProps {
@@ -14,8 +14,8 @@ const REGULAR_TEXT_STYLE = "";
 const REMOVED_LINE_STYLE = "table-cell text-left whitespace-pre-wrap bg-red-200/50";
 const ADDED_LINE_STYLE = "table-cell text-left whitespace-pre-wrap bg-green-200/50";
 const REGULAR_LINE_STYLE = "table-cell text-left whitespace-pre-wrap";
-const FILLER_LINE_STYLE = "table-cell text-left bg-gray-50/10";
-const COLLAPSED_LINE_STYLE = "table-cell text-left bg-gray-100/50";
+const FILLER_LINE_STYLE = "table-cell text-left bg-gray-400/10";
+const COLLAPSED_LINE_STYLE = "p-0 bg-gray-200/50 hover:bg-gray-200";
 const LINE_NUM_STYLE = "table-cell text-right pr-2";
 
 export default function DiffDisplay(props: DiffDisplayProps) {
@@ -58,7 +58,6 @@ export default function DiffDisplay(props: DiffDisplayProps) {
       });
     }
   });
-
   // If either text ends in newline, it must be manually inserted
   for (let i = lineDiff.length - 1; i >= 0; i--) {
     if (!lineDiff[i].added) {
@@ -76,7 +75,6 @@ export default function DiffDisplay(props: DiffDisplayProps) {
       break;
     }
   }
-  
   // Add final padding lines if needed
   while (nLines.length > oLines.length) {
     oLines.push(paddingLine);
@@ -91,7 +89,7 @@ export default function DiffDisplay(props: DiffDisplayProps) {
   console.log(nLines);
 
   // Compare each line, and generate word/char-level diffs between compared lines
-  // Removed or added lines paired with a padding line are considered completely changed, receiving deeper-colored highlighting
+  // Removed or added lines paired with a padding line are considered completely changed
   let oLineHunks: Change[][] = [];
   let nLineHunks: Change[][] = [];
   
@@ -174,35 +172,6 @@ export default function DiffDisplay(props: DiffDisplayProps) {
       nLineStyle = REGULAR_LINE_STYLE;
     }
 
-    // Handle text collapsing (if in effect)
-    if (options.collapseLines) {
-      if (oLineStyle === REGULAR_LINE_STYLE) {
-        // Mark start point of collapsed section
-        if (oCollapseStart === null) {
-          oCollapseStart = oLineNum;
-          nCollapseStart = nLineNum;
-        }
-        // Mark end point of collapsed section if next line is not unedited, create entry indicating this info
-        if (i + 1 === oLineHunks.length || !(oLineHunks[i + 1].length === 1 && !oLineHunks[i + 1][0].removed && nLineHunks[i + 1].length === 1 && !nLineHunks[i + 1][0].added)) {
-          const oCollapseText = `Lines ${oCollapseStart} to ${oLineNum} collapsed`;
-          const nCollapseText = `Lines ${nCollapseStart} to ${nLineNum} collapsed`;
-          const collapsedLinesEntry = (
-            <div class="table-row">
-              <div class={COLLAPSED_LINE_STYLE}></div>
-              <div class={COLLAPSED_LINE_STYLE}>{oCollapseText}</div>
-              <div class={COLLAPSED_LINE_STYLE}></div>
-              <div class={COLLAPSED_LINE_STYLE}>{nCollapseText}</div>
-            </div>
-          );
-          dispTableLines.push(collapsedLinesEntry);
-  
-          oCollapseStart = null;
-          nCollapseStart = null;
-        }
-        continue;
-      }
-    }
-
     // Convert paired line diffs into text spans
     const oLineSpans = oLineHunks[i].map((ch) => {
       if (ch.removed) {
@@ -240,6 +209,41 @@ export default function DiffDisplay(props: DiffDisplayProps) {
     dispTableLines.push(dispTableEntry);
   }
 
+  // Move unedited lines into collapsible objects if option is selected
+  if (options.collapseLines) {
+    // Identify contiguous unmatched lines 
+    // Done in reverse order so removing lines does not interfere with line numbers of sections earlier in the text
+    let uneditedSections: { start: number, end: number }[] = [];
+    let sectionTracker: { start: number, end: number } = { start: 0, end: 0 };
+    for (let i = dispTableLines.length - 1; i >= 0; i--) {
+      if (sectionTracker.end === 0 &&
+        (oLineHunks[i].length === 1 && !oLineHunks[i][0].removed && nLineHunks[i].length === 1 && !nLineHunks[i][0].added)) {
+        sectionTracker.end = i + 1;
+      }
+      if (sectionTracker.end > 0 &&
+        (i === 0 || !(oLineHunks[i - 1].length === 1 && !oLineHunks[i - 1][0].removed && nLineHunks[i - 1].length === 1 && !nLineHunks[i - 1][0].added))) {
+        sectionTracker.start = i;
+        uneditedSections.push(sectionTracker);
+        sectionTracker = { start: 0, end: 0 };
+      }
+    }
+    console.log(uneditedSections);
+    
+    // Move the identified lines into a collapsible object
+    uneditedSections.forEach(({ start, end }) => {
+      const collapsedLines = dispTableLines.splice(start, end - start);
+      console.log(collapsedLines);
+      const collapsible = (
+        <CollapsedLines
+          oStartLineno={start}
+          nStartLineno={start}
+          collapsedLines={collapsedLines}
+        />
+      );
+      dispTableLines.splice(start, 0, collapsible);
+    })
+  }
+
   return (
     <table class="table-fixed w-full">
       <thead>
@@ -250,7 +254,51 @@ export default function DiffDisplay(props: DiffDisplayProps) {
           <th/>
         </tr>
       </thead>
-      {dispTableLines}
+      <tbody>
+        {dispTableLines}
+      </tbody>
     </table>
+  );
+}
+
+interface CollapsedLinesProps {
+  oStartLineno: number,
+  nStartLineno: number,
+  collapsedLines: JSX.Element[]
+}
+
+function CollapsedLines(props: CollapsedLinesProps) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  if (isOpen) {
+    return (
+      <div class="table-row" onClick={() => setIsOpen(false)}>
+        <td colspan={4} class={COLLAPSED_LINE_STYLE}>
+          <table class="table-fixed w-full">
+            <thead>
+              <tr>
+                <th class="w-8"/>
+                <th/>
+                <th class="w-8"/>
+                <th/>
+              </tr>
+            </thead>
+            <tbody>
+              {props.collapsedLines}
+            </tbody>
+          </table>
+        </td>
+      </div>
+    );
+  }
+  const oLinenoMsg = `Lines ${props.oStartLineno} to ${props.oStartLineno + props.collapsedLines.length} collapsed`;
+  const nLinenoMsg = `Lines ${props.nStartLineno} to ${props.nStartLineno + props.collapsedLines.length} collapsed`;
+  return (
+    <tr onClick={() => setIsOpen(true)} class={COLLAPSED_LINE_STYLE}>
+      <td>...</td>
+      <td>{oLinenoMsg}</td>
+      <td>...</td>
+      <td>{nLinenoMsg}</td>
+    </tr>
   );
 }
