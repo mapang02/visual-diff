@@ -8,11 +8,11 @@ export interface DiffOptions {
   collapseLines: boolean
 }
 
-export interface DiffOptionsContext {
+export interface DiffOptionsDispatch {
   options: DiffOptions,
   setOptions: Dispatch<DiffOptions>
 }
 
-export const OptionsContext = createContext<DiffOptionsContext|null>(null);
+export const OptionsContext = createContext<DiffOptionsDispatch|null>(null);
 export default OptionsContext;
 
