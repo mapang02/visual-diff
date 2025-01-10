@@ -5,9 +5,10 @@ export default function OptionsMenu() {
   const { options, setOptions } = useContext(OptionsContext)!;
   
   return (
-    <fieldset>
-      <legend>Option:</legend>
+    <fieldset class="w-max border-2 rounded p-2 m-auto text-left">
+      <legend class="text-center px-2 m-auto">Options</legend>
       <div>
+        <label class="text-left mx-2">Diff level:</label>
         <input
           type="radio"
           id="diff-mode-option-1"
@@ -15,17 +16,21 @@ export default function OptionsMenu() {
           onClick={() => setOptions({...options, diffMode: "word"})}
           checked={options.diffMode === "word"}
         />
-        <label for="diff-option-1">Word</label>
+        <label class="pl-0.5 pr-2" for="diff-option-1">
+          Word
+        </label>
         <input
           type="radio"
           id="diff-mode-option-2"
           name="diff-mode-option"
           onClick={() => setOptions({...options, diffMode: "char"})}
         />
-        <label for="diff-option-2">Character</label>
+        <label class="pl-0.5 pr-2" for="diff-option-2">
+          Character
+        </label>
       </div>
       <div>
-        <label for="collapse-option">Collapse common lines:</label>
+        <label class="text-left mx-2" for="collapse-option">Collapse common lines:</label>
         <input
           type="checkbox"
           id="collapse-option"

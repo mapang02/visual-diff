@@ -1,38 +1,32 @@
 import { useState } from 'preact/hooks'
-//import TextArea from './components/TextArea'
-import DiffDisplay from './components/DiffDisplay'
 //import preactLogo from './assets/preact.svg'
 //import viteLogo from '/vite.svg'
 import './app.css'
+import DiffDisplay from './components/DiffDisplay'
 import OptionsMenu from './components/OptionsMenu';
+import TextInput from './components/TextInput';
 import { DiffOptions, OptionsContext } from "./context/OptionsContext";
 import { TextInputState, TextInputContext } from "./context/TextInputContext";
-import TextInput from './components/TextInput';
 
 export function App() {
-  //const [oldText, setOldText] = useState("");
-  //const [newText, setNewText] = useState("");
-  const [options, setOptions] = useState<DiffOptions>({ diffMode: "word", collapseLines: false });
+  const defaultOptions: DiffOptions = {
+    diffMode: "word",
+    collapseLines: false
+  };
+  const [options, setOptions] = useState(defaultOptions);
   const [inputState, setInputState] = useState<TextInputState>({ oldInput: "", newInput: "", oldTextValue: "", newTextValue: "" });
-
-
-  const swapInputs = () => {
-    setInputState({ oldInput: inputState.newTextValue, newInput: inputState.oldTextValue, oldTextValue: inputState.newTextValue, newTextValue: inputState.oldTextValue })
-  }
 
   return (
     <OptionsContext.Provider value={{ options: options, setOptions: setOptions }}>
       <TextInputContext.Provider value={{ inputState: inputState, setInputState: setInputState }}>
-        <div class="w-full">
-          <OptionsMenu/>
-          <button
-            name="swap-inputs"
-            onClick={swapInputs}
-          >
-            Swap
-          </button>
-          <DiffDisplay/>
+        <div class="m-4 max-h-svh">
+          <div class="h-[50svh] overflow-auto bg-gray-100/10 rounded my-2 p-1">
+            <DiffDisplay/>
+          </div>
           <TextInput/>
+          <div class="m-auto">
+            <OptionsMenu/>
+          </div>
         </div>
       </TextInputContext.Provider>
     </OptionsContext.Provider>

@@ -19,7 +19,6 @@ export default function DiffDisplay() {
   const { inputState } = useContext(TextInputContext)!;
 
   const dispTableLines = useMemo(() => {
-    console.log("Updated memoized value");
     return generateDisplayLines(inputState.oldTextValue, inputState.newTextValue, options);
   }, [inputState.oldTextValue, inputState.newTextValue, options]);
 
@@ -250,12 +249,12 @@ export default function DiffDisplay() {
   }
 
   return (
-    <table class="table-fixed w-full">
+    <table class="table-fixed w-full font-mono">
       <thead>
         <tr>
-          <th class="w-8"/>
+          <th class="w-16"/>
           <th/>
-          <th class="w-8"/>
+          <th class="w-16"/>
           <th/>
         </tr>
       </thead>
@@ -282,9 +281,9 @@ function CollapsedLines(props: CollapsedLinesProps) {
           <table class="table-fixed w-full">
             <thead>
               <tr>
-                <th class="w-8"/>
+                <th class="w-16"/>
                 <th/>
-                <th class="w-8"/>
+                <th class="w-16"/>
                 <th/>
               </tr>
             </thead>
@@ -299,9 +298,9 @@ function CollapsedLines(props: CollapsedLinesProps) {
 
   return (  // Collapsed text section
     <tr onClick={() => setIsOpen(true)} class={COLLAPSED_LINE_STYLE}>
-      <td>...</td>
+      <td class={LINE_NUM_STYLE}>...</td>
       <td>{`Lines ${props.oStartLineno} to ${props.oStartLineno + props.collapsedLines.length} collapsed`}</td>
-      <td>...</td>
+      <td class={LINE_NUM_STYLE}>...</td>
       <td>{`Lines ${props.nStartLineno} to ${props.nStartLineno + props.collapsedLines.length} collapsed`}</td>
     </tr>
   );
