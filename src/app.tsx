@@ -16,13 +16,17 @@ export function App() {
   const [options, setOptions] = useState(defaultOptions);
   const [inputState, setInputState] = useState<TextInputState>({ oldInput: "", newInput: "", oldTextValue: "", newTextValue: "" });
 
+  const diffDisplayBox = (
+    <div class="h-[50svh] overflow-auto bg-gray-100/10 border border-neutral-200 rounded my-2 p-1">
+      <DiffDisplay/>
+    </div>
+  );
+
   return (
     <OptionsContext.Provider value={{ options: options, setOptions: setOptions }}>
       <TextInputContext.Provider value={{ inputState: inputState, setInputState: setInputState }}>
         <div class="m-4 max-h-svh">
-          <div class="h-[50svh] overflow-auto bg-gray-100/10 rounded my-2 p-1">
-            <DiffDisplay/>
-          </div>
+          {!(inputState.oldTextValue === "" && inputState.newTextValue === "") ? diffDisplayBox : <div/>}
           <TextInput/>
           <div class="m-auto">
             <OptionsMenu/>

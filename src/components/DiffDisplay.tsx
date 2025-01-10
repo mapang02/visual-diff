@@ -10,7 +10,7 @@ const REGULAR_TEXT_STYLE = "";
 const REMOVED_LINE_STYLE = "table-cell text-left whitespace-pre-wrap bg-red-200/50";
 const ADDED_LINE_STYLE = "table-cell text-left whitespace-pre-wrap bg-green-200/50";
 const REGULAR_LINE_STYLE = "table-cell text-left whitespace-pre-wrap";
-const FILLER_LINE_STYLE = "table-cell text-left bg-gray-400/10";
+const FILLER_LINE_STYLE = "table-cell text-left bg-gray-400/20";
 const COLLAPSED_LINE_STYLE = "p-0 bg-gray-200/50 hover:bg-gray-200/75";
 const LINE_NUM_STYLE = "table-cell text-right pr-2";
 
@@ -276,7 +276,11 @@ function CollapsedLines(props: CollapsedLinesProps) {
 
   if (isOpen) {
     return (  // Expanded text section
-      <div class="table-row" onClick={() => setIsOpen(false)}>
+      <div
+        class="table-row"
+        title="Click to hide unedited lines"
+        onClick={() => setIsOpen(false)}
+      >
         <td colspan={4} class={COLLAPSED_LINE_STYLE}>
           <table class="table-fixed w-full">
             <thead>
@@ -297,7 +301,11 @@ function CollapsedLines(props: CollapsedLinesProps) {
   }
 
   return (  // Collapsed text section
-    <tr onClick={() => setIsOpen(true)} class={COLLAPSED_LINE_STYLE}>
+    <tr
+      class={COLLAPSED_LINE_STYLE}
+      title="Click to show collapsed lines"
+      onClick={() => setIsOpen(true)}
+    >
       <td class={LINE_NUM_STYLE}>...</td>
       <td>{`Lines ${props.oStartLineno} to ${props.oStartLineno + props.collapsedLines.length} collapsed`}</td>
       <td class={LINE_NUM_STYLE}>...</td>

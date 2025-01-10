@@ -5,7 +5,7 @@ export default function OptionsMenu() {
   const { options, setOptions } = useContext(OptionsContext)!;
   
   return (
-    <fieldset class="w-max border-2 rounded p-2 m-auto text-left">
+    <fieldset class="w-max border border-neutral-200 rounded p-2 m-auto text-left">
       <legend class="text-center px-2 m-auto">Options</legend>
       <div>
         <label class="text-left mx-2">Diff level:</label>

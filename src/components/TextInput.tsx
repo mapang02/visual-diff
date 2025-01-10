@@ -1,7 +1,7 @@
 import TextInputContext from "../context/TextInputContext";
 import { useContext } from "preact/hooks";
 
-const TEXT_INPUT_STYLE = "w-full p-2 rounded font-mono resize-none";
+const TEXT_INPUT_STYLE = "w-full border border-neutral-200 p-2 rounded font-mono resize-none";
 
 export default function TextArea() {
   const { inputState, setInputState } = useContext(TextInputContext)!;
@@ -33,9 +33,10 @@ export default function TextArea() {
         />
         <button
           class="h-max p-1"
+          title="Swap the two inputs"
           onClick={swapInputs}
         >
-          {"↔"}
+          {"\u21C4"}
         </button>
         <textarea
           name="new-text"
