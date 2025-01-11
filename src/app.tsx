@@ -25,12 +25,10 @@ export function App() {
   return (
     <OptionsContext.Provider value={{ options: options, setOptions: setOptions }}>
       <TextInputContext.Provider value={{ inputState: inputState, setInputState: setInputState }}>
+        <OptionsMenu/>
         <div class="m-4 max-h-svh">
           {!(inputState.oldTextValue === "" && inputState.newTextValue === "") ? diffDisplayBox : <div/>}
           <TextInput/>
-          <div class="m-auto">
-            <OptionsMenu/>
-          </div>
         </div>
       </TextInputContext.Provider>
     </OptionsContext.Provider>

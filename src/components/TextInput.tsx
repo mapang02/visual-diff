@@ -16,7 +16,7 @@ export default function TextArea() {
   }
     
   return (
-    <div>
+    <div class="table table-fixed w-full">
       <div class="grid grid-cols-[1fr_max-content_1fr] gap-x-2 gap-y-2 items-center">
         <div>
           Original text:
