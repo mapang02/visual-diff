@@ -1,0 +1,1 @@
+A tool that provides a visual comparison between two files, inspired by various diff and file history tools. Designed to work with any kind of text in a simple manner.
