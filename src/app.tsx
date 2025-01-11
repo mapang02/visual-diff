@@ -25,10 +25,13 @@ export function App() {
   return (
     <OptionsContext.Provider value={{ options: options, setOptions: setOptions }}>
       <TextInputContext.Provider value={{ inputState: inputState, setInputState: setInputState }}>
-        <OptionsMenu/>
         <div class="m-4 max-h-svh">
+          <OptionsMenu/>
           {!(inputState.oldTextValue === "" && inputState.newTextValue === "") ? diffDisplayBox : <div/>}
           <TextInput/>
+          <div class="w-3/4 mx-auto mt-4 border-t">
+            <a class="text-current hover:text-current hover:border-b" href="https://github.com/mapang02/visual-diff">GitHub</a>
+          </div>
         </div>
       </TextInputContext.Provider>
     </OptionsContext.Provider>
